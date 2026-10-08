@@ -67,3 +67,17 @@ x_has_deliveries: ['No se puede cambiar o cancelar: hay entregas registradas.', 
 x_reason_required: ['Escribe el motivo.', 'Enter a reason.'], x_receiver_required: ['Escribe quién recibió.', 'Enter who received.'], x_forbidden: ['Sin permiso.', 'Not allowed.'], x_no_groups: ['Agrega al menos una maestra o grupo.', 'Add at least one teacher or group.'], x_no_orderable_products: ['Habilita al menos una prenda que acepte pedidos.', 'Enable at least one garment that accepts orders.'],
 x_invalid_personalization: ['Falta el texto de personalización.', 'Personalization text is missing.'], x_invalid_size: ['Talla no disponible.', 'Size not available.'], x_invalid_color: ['Color no disponible.', 'Color not available.'], x_dates: ['Fechas inválidas.', 'Invalid dates.']
 };
+
+Object.assign(window.JK_DICT, {
+app:['Preórdenes escolares','School preorders'],
+pickSchool:['Selecciona tu colegio','Select your school'],findSchool:['Buscar colegio','Search schools'],startPreorder:['Iniciar preorden','Start preorder'],noSchools:['No hay colegios disponibles por ahora.','No schools are available right now.'],
+preorderNotice:['Selecciona tus prendas y envía una preorden. No se cobra aquí. Norma revisará tu solicitud antes de confirmarla para producción.','Choose your items and submit a preorder. No payment is collected here. Norma will review your request before confirming it for production.'],
+review:['Revisar preorden','Review preorder'],submit:['Enviar preorden','Submit preorder'],doneTitle:['Preorden recibida','Preorder received'],another:['Registrar otra preorden','Submit another preorder'],
+doneMsg:['Guarda este número. Tu preorden está pendiente de revisión por Norma y todavía no está confirmada para producción. Los cambios se solicitan a Norma.','Keep this number. Your preorder is awaiting Norma’s review and is not yet confirmed for production. Contact Norma for changes.'],
+roleRep:['Papá, mamá o representante','Parent or guardian'],nOrders:['Preórdenes y pedidos confirmados','Preorders and confirmed orders'],stActive:['Confirmada para producción','Confirmed for production'],stPreorder:['Preorden recibida · pendiente de revisión','Preorder received · awaiting review'],
+confirmPreorder:['Confirmar para producción','Confirm for production'],confirmQuestion:['¿Confirmar esta preorden? Sus prendas pasarán a producción y a los reportes de entrega.','Confirm this preorder? Its items will be included in production and delivery reports.'],
+a_confirmed:['Confirmada para producción','Confirmed for production'],mMixed:['Encargada, maestras y familias','Coordinator, teachers and families'],
+sumNote:['Producción y entregas cuentan solo solicitudes confirmadas. Las preórdenes pendientes y las canceladas quedan excluidas.','Production and delivery count confirmed requests only. Pending preorders and cancelled requests are excluded.'],
+ordersN:['Solicitudes confirmadas','Confirmed requests'],ordered:['Prendas confirmadas','Confirmed items'],receivedPending:['Preórdenes pendientes de revisión','Preorders awaiting review'],r_preorders:['Preórdenes recibidas (no autoriza producción)','Received preorders (does not authorize production)'],
+groupProgressNote:['El avance de preparación se registra por colegio. Para una maestra específica se muestran las cantidades confirmadas, sin asignar el avance general a su salón.','Preparation progress is tracked for the school. A teacher-specific report shows confirmed quantities without assigning overall progress to that classroom.']
+});

@@ -2,7 +2,7 @@
 (function () {
   const { T, esc, money, loc, fd, szl, price, uuid } = JK;
   const root = document.getElementById('app');
-  const slug = new URLSearchParams(location.search).get('p') || '';
+  let slug = new URLSearchParams(location.search).get('p') || '';
   const blank = () => ({ group: '', prod: '', model: '', age: '', color: '', size: '', qty: '1', text: '' });
   const S = { data: null, fatal: '', step: 1, f: { name: '', role: '', contact: '' }, o: blank(), lines: [], errs: {}, ack: false, sending: false, done: null, reqKey: uuid(), added: '', zoom: '', submitErr: '' };
 
@@ -22,7 +22,7 @@
 
   async function load() {
     if (!JK.configured()) S.fatal = T('eConfig');
-    else if (!slug) S.fatal = T('eLink');
+    else if (!slug) { const { data, error } = await JK.sb().rpc('public_list_schools'); if (error) S.fatal = T('eServer'); else S.schools = data || []; }
     else {
       const { data, error } = await JK.sb().rpc('public_get_period', { p_slug: slug });
       if (error) S.fatal = T('eServer'); else if (!data) S.fatal = T('eLink'); else S.data = data;
@@ -46,7 +46,7 @@
   const steps = () => `<div class="row" style="gap:8px">${[1, 2, 3, 4].map(n => `<div class="step ${S.step === n ? 'on' : S.step > n ? 'past' : ''}"><b>${n}</b> ${T('s' + n)}</div>`).join('')}</div>`;
 
   function step1() {
-    const roles = S.data.mode === 'coord' ? [{ v: 'coord', l: T('roleCoord') }] : [{ v: 'teacher', l: T('roleTeacher') }, { v: 'rep', l: T('roleRep') }];
+    const roles = S.data.mode === 'mixed' ? [{ v: 'coord', l: T('roleCoord') }, { v: 'teacher', l: T('roleTeacher') }, { v: 'rep', l: T('roleRep') }] : S.data.mode === 'coord' ? [{ v: 'coord', l: T('roleCoord') }] : [{ v: 'teacher', l: T('roleTeacher') }, { v: 'rep', l: T('roleRep') }];
     return `<div class="card col"><h2>${T('s1')}</h2><div class="grid">
       <label>${T('name')}<input data-f="name" value="${esc(S.f.name)}" autocomplete="name"/>${err('name')}</label>
       <label>${T('role')}<select data-f="role" data-re>${opts([{ v: '', l: T('pick') }, ...roles], S.f.role)}</select>${err('role')}</label>
@@ -140,9 +140,10 @@
   function render() {
     document.documentElement.lang = JK.lang;
     if (S.fatal) { root.innerHTML = `<div class="col" style="max-width:640px;margin:0 auto;padding:22px 16px">${head()}<div class="card"><b class="err">${esc(S.fatal)}</b></div></div>`; return; }
+    if (!slug && S.schools) { root.innerHTML = `<div class="col" style="max-width:880px;margin:0 auto;padding:22px 16px">${head()}<div class="card col"><h1>${T('pickSchool')}</h1><p>${T('preorderNotice')}</p><label>${T('findSchool')}<input id="school-search" type="search"/></label><div id="school-list" class="col">${S.schools.map(p => `<div class="card row between school-option" data-name="${esc(p.name.toLowerCase())}"><div><b>${esc(p.name)}</b><div>${fd(p.open)} – ${fd(p.close)} · ${T(p.state === 'open' ? 'stOpen' : 'stPending')}</div></div><button class="btn" data-act="pickSchool" data-slug="${esc(p.slug)}" ${p.state !== 'open' ? 'disabled' : ''}>${T('startPreorder')}</button></div>`).join('') || T('noSchools')}</div></div></div>`; return; }
     if (!S.data) { root.innerHTML = `<div style="padding:40px;text-align:center" class="muted">…</div>`; return; }
     const body = [null, step1, step2, step3, step4][S.step]();
-    root.innerHTML = `<div class="col" style="max-width:880px;margin:0 auto;padding:22px 16px 70px">${head()}${schoolCard()}${steps()}${body}</div>${S.zoom ? `<div class="zoom" data-act="unzoom"><img src="${esc(S.zoom)}" alt=""/></div>` : ''}`;
+    root.innerHTML = `<div class="col" style="max-width:880px;margin:0 auto;padding:22px 16px 70px">${head()}<a class="lk" href="index.html">← ${T('pickSchool')}</a>${schoolCard()}<div class="muted">${T('preorderNotice')}</div>${steps()}${body}</div>${S.zoom ? `<div class="zoom" data-act="unzoom"><img src="${esc(S.zoom)}" alt=""/></div>` : ''}`;
     if (window.parent !== window) parent.postMessage({ type: 'jk-height', h: document.documentElement.scrollHeight + 20 }, '*');
   }
 
@@ -155,6 +156,7 @@
     return { e, q, ind };
   }
   const acts = {
+    pickSchool: el => { location.href = 'index.html?p=' + encodeURIComponent(el.dataset.slug); },
     lang: el => { JK.setLang(el.dataset.v); render(); },
     to1: () => { S.step = 1; S.errs = {}; render(); },
     to2: () => {
@@ -194,7 +196,7 @@
     else if ('ack' in t.dataset) S.ack = t.checked; else return;
     if (rerender || t.dataset.re !== undefined) render();
   };
-  root.addEventListener('input', e => { if (e.target.type !== 'checkbox' && e.target.tagName !== 'SELECT') setVal(e.target, false); });
+  root.addEventListener('input', e => { if (e.target.id === 'school-search') { const q = e.target.value.toLowerCase(); root.querySelectorAll('.school-option').forEach(el => el.hidden = !el.dataset.name.includes(q)); return; } if (e.target.type !== 'checkbox' && e.target.tagName !== 'SELECT') setVal(e.target, false); });
   root.addEventListener('change', e => setVal(e.target, false));
   render(); load();
 })();
