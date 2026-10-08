@@ -1,0 +1,10 @@
+/* Tokens del Sistema de Diseño JKINnovations (copiados; no dependen del entorno de diseño) */
+@import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+:root{
+--terracotta:#9A4A3C;--deep-blue:#274969;--light-terracotta:#C16D4B;--white:#FFFFFF;--textile-black:#1E1E22;--textile-gray:#6B6B73;
+--terracotta-tint:#F4E6E1;--blue-tint:#E4EBF2;--paper:#FAF7F4;--line:#E3DAD4;
+--font-sans:'Raleway',system-ui,sans-serif;
+--radius-md:10px;--radius-lg:16px;--radius-pill:999px;
+--shadow-sm:0 1px 3px rgba(39,73,105,.10);--shadow-md:0 6px 20px rgba(39,73,105,.12);
+--ease:cubic-bezier(.2,.7,.2,1);--dur:180ms;
+}
