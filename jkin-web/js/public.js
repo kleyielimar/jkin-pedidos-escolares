@@ -33,7 +33,7 @@
   const langBtns = () => ['es', 'en'].map(l => `<button class="lang ${JK.lang === l ? 'on' : ''}" data-act="lang" data-v="${l}">${l.toUpperCase()}</button>`).join('');
   const head = () => `<div class="row between"><img src="assets/logo-color.svg" alt="JKINnovations" style="height:58px;width:auto"/><div class="row" style="gap:6px">${langBtns()}</div></div>`;
   const opts = (arr, sel) => arr.map(o => `<option value="${esc(o.v)}" ${o.v === sel ? 'selected' : ''} ${o.dis ? 'disabled' : ''}>${esc(o.l)}</option>`).join('');
-  const err = k => `<span class="err">${esc(S.errs[k] || '')}</span>`;
+  const err = k => `<span class="err" ${S.errs[k] ? 'role="alert"' : ''}>${esc(S.errs[k] || '')}</span>`;
 
   function schoolCard() {
     const d = S.data, lg = d.school.logo;
@@ -66,6 +66,22 @@
     }).join('');
   }
 
+  function groupPicker() {
+    const locked = S.data.mode === 'each' && S.lines.length > 0;
+    const label = JK.lang === 'es' ? '¿Para qué maestra o salón son estas prendas?' : 'Which teacher or classroom are these items for?';
+    return `<div class="col" style="background:var(--blue-tint);border-radius:12px;padding:12px 14px"><label>${label}<select id="item-group" data-o="group" data-re ${locked ? 'disabled' : ''}>${opts([{ v: '', l: T('pick') }, ...S.data.groups.map(g => ({ v: g.id, l: gl(g) }))], S.o.group)}</select></label>${err('group')}${locked ? `<div class="muted">${T('lockNote')}</div>` : ''}</div>`;
+  }
+
+  function showErrors(e) {
+    S.errs = e; S.added = ''; render();
+    const field = root.querySelector('[data-o="' + Object.keys(e)[0] + '"]');
+    const target = field || root.querySelector('[role="alert"]');
+    if (target) {
+      target.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      if (field) field.focus({ preventScroll: true });
+    }
+  }
+
   function panel(p) {
     const o = S.o, col = colorOf(p, o.color), mdl = p.models.find(m => m.id === o.model), ph = photoOf(p, col);
     const ind = p.personalization !== 'none';
@@ -79,6 +95,7 @@
         ${ph ? `<button class="lk" data-act="zoom" data-src="${esc(ph)}" style="text-align:left">${T('enlarge')}</button>` : ''}
         ${col && !col.photo && ph ? `<div class="muted">${T('refPhoto').replace('{c}', esc(loc(col)))}</div>` : ''}</div>
       <div class="col" style="flex:2 1 300px">
+        ${groupPicker()}
         ${p.models.length ? `<label>${T('model')}<select data-o="model" data-re>${opts([{ v: '', l: T('pick') }, ...p.models.map(m => ({ v: m.id, l: loc(m.label) + ' · ' + m.code }))], o.model)}</select>${err('model')}</label>` : ''}
         ${needsAge(p) ? `<label>${T('ageType')}<select data-o="age" data-re data-clr="size">${opts([{ v: '', l: T('pick') }, ...p.ages.map(a => ({ v: a, l: T(a === 'child' ? 'youth' : 'adultW') }))], o.age)}</select>${err('age')}</label>` : ''}
         <div><div style="font-size:13px;font-weight:600;margin-bottom:6px">${T('color')}: <span style="color:var(--terracotta)">${col ? esc(loc(col)) : '—'}</span></div>
@@ -89,6 +106,7 @@
           ${ind ? `<label>${p.personalization === 'nameNumber' ? T('persNN') : T('persName')}<input data-o="text" value="${esc(o.text)}" maxlength="60"/>${err('text')}</label>` : ''}</div>
         <div style="background:var(--paper);border-radius:12px;padding:10px 14px"><div class="row between"><span>${T('unitPrice')}</span><b>${u == null ? (o.size ? T('priceTbd') : '—') : money(u)}</b></div>
           <div class="row between"><span>${T('subtotal')}</span><b>${u == null || !(q > 0) ? '—' : money(u * q)}</b></div><div class="muted">${T('priceRef')}</div></div>
+        ${Object.keys(S.errs).some(k => k !== 'lines') ? `<div class="warn" role="alert">${Object.values(S.errs).filter(Boolean).map(esc).join('<br>')}</div>` : ''}
         <div class="row"><button class="btn" data-act="addLine">+ ${T('addLine')}</button><button class="btn ghost" data-act="closePanel">${T('done')}</button></div>
         ${S.added ? `<div class="ok">${S.added}</div>` : ''}</div></div></div>`;
   }
@@ -116,8 +134,7 @@
     const p = S.o.prod ? P(S.o.prod) : null, locked = S.data.mode === 'each' && S.lines.length > 0;
     const gl2 = groupedLines(false);
     return `<div class="card col"><h2>${T('s2')}</h2>
-      <div class="col" style="background:var(--blue-tint);border-radius:12px;padding:12px 14px"><label>${T('addingFor')}<select data-o="group" data-re ${locked ? 'disabled' : ''}>${opts([{ v: '', l: T('pick') }, ...S.data.groups.map(g => ({ v: g.id, l: gl(g) }))], S.o.group)}</select></label>${err('group')}${locked ? `<div class="muted">${T('lockNote')}</div>` : ''}</div>
-      ${p ? panel(p) : catalog()}<hr style="border:0;border-top:1px solid var(--line);width:100%"/>
+      ${p ? panel(p) : groupPicker() + catalog()}<hr style="border:0;border-top:1px solid var(--line);width:100%"/>
       <h3>${T('items')} (${count()})</h3>${S.lines.length ? gl2.html : `<div class="muted">${T('noItems')}</div>`}${err('lines')}
       <div class="row between"><button class="btn ghost" data-act="to1">← ${T('back')}</button><button class="btn" data-act="to3">${T('review')} →</button></div></div>`;
   }
@@ -163,12 +180,12 @@
       if (S.step === 1) { const e = {}; if (!S.f.name.trim()) e.name = T('eName'); if (!S.f.role) e.role = T('eRole'); if (!S.f.contact.trim()) e.contact = T('eContact'); if (Object.keys(e).length) { S.errs = e; return render(); } }
       S.step = 2; S.errs = {}; render();
     },
-    to3: () => { if (!S.lines.length) { S.errs = { lines: T('eLines') }; return render(); } S.step = 3; S.errs = {}; S.ack = false; S.o = { ...blank(), group: S.o.group }; render(); },
+    to3: () => { if (!S.lines.length) { if (S.o.prod) { const { e } = validLine(); if (Object.keys(e).length) return showErrors(e); } return showErrors({ lines: JK.lang === 'es' ? 'Primero pulsa «Agregar» para incluir la prenda en tu preorden.' : 'First click “Add” to include this item in your preorder.' }); } S.step = 3; S.errs = {}; S.ack = false; S.o = { ...blank(), group: S.o.group }; render(); },
     choose: el => { S.o = { ...blank(), group: S.o.group, prod: el.dataset.id }; S.errs = {}; S.added = ''; render(); const pn = document.getElementById('panel'); if (pn) window.scrollTo({ top: pn.getBoundingClientRect().top + window.scrollY - 12 }); },
     closePanel: () => { S.o = { ...blank(), group: S.o.group }; S.errs = {}; S.added = ''; render(); },
     color: el => { S.o.color = el.dataset.id; render(); },
     addLine: () => {
-      const { e, q, ind } = validLine(); if (Object.keys(e).length) { S.errs = e; S.added = ''; return render(); }
+      const { e, q, ind } = validLine(); if (Object.keys(e).length) return showErrors(e);
       const o = S.o; S.lines.push({ id: uuid(), group: o.group, prod: o.prod, model: o.model, age: o.age, color: o.color, size: o.size, qty: q, text: ind ? o.text.trim() : '' });
       S.o = { ...o, size: '', qty: '1', text: '' }; S.errs = {}; S.added = T('added'); render();
     },
