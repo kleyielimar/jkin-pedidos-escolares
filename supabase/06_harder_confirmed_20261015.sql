@@ -38,7 +38,7 @@ insert into harder_classes_20261015 values
 ('Herrick','6',27,array['herrick','victoriaherrick']),
 ('Klopstock','6',28,array['klopstock','samuelklopstock']);
 
-create function pg_temp.harder_name_key(t text) returns text
+create or replace function pg_temp.harder_name_key(t text) returns text
 language sql immutable as $$
   select regexp_replace(
     regexp_replace(lower(trim(t)), '^(ms|mrs|mr)[.]?[[:space:]]+', ''),
@@ -47,7 +47,7 @@ $$;
 
 do $$
 declare
-  target uuid; n int; c record; found_id uuid; conflict_names text;
+  target uuid; n int; class_row record; found_id uuid; conflict_names text;
 begin
   select count(*), (array_agg(p.id))[1] into n,target
   from public.periods p join public.schools s on s.id=p.school_id
@@ -71,18 +71,18 @@ begin
     raise exception 'No se aplico ningun cambio. Estas clases antiguas tienen pedidos o entregas y requieren revision: %',conflict_names;
   end if;
 
-  for c in select * from harder_classes_20261015 order by sort loop
+  for class_row in select * from harder_classes_20261015 order by sort loop
     select count(*), (array_agg(g.id))[1] into n,found_id
     from public.groups g where g.period_id=target
-      and pg_temp.harder_name_key(g.teacher)=any(c.aliases);
+      and pg_temp.harder_name_key(g.teacher)=any(class_row.aliases);
     if n>1 then
-      raise exception 'No se aplico ningun cambio. Hay clases duplicadas para %; revisar antes de continuar.',c.teacher;
+      raise exception 'No se aplico ningun cambio. Hay clases duplicadas para %; revisar antes de continuar.',class_row.teacher;
     elsif n=1 then
-      update public.groups set teacher=c.teacher,grade=c.grade,sort=c.sort
+      update public.groups set teacher=class_row.teacher,grade=class_row.grade,sort=class_row.sort
       where id=found_id;
     else
       insert into public.groups(period_id,teacher,grade,sort)
-      values(target,c.teacher,c.grade,c.sort);
+      values(target,class_row.teacher,class_row.grade,class_row.sort);
     end if;
   end loop;
 
