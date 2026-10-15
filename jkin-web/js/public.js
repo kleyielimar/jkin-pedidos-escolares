@@ -20,12 +20,19 @@
   const colorOf = (p, id) => p.colors.find(c => c.id === id);
   const photoOf = (p, c) => (c && c.photo) || p.photo || '';
 
+  // Retired Harder classes stay in the database and admin history.
+  // Hide only these confirmed obsolete names in freshly loaded public forms.
+  function groupsForNewOrders(data) {
+    if (data.school.name !== 'Harder Elementary School') return data.groups;
+    return data.groups.filter(g => !['Mr Dirilo', 'Ms Galan'].includes(g.teacher.trim()));
+  }
+
   async function load() {
     if (!JK.configured()) S.fatal = T('eConfig');
     else if (!slug) { const { data, error } = await JK.sb().rpc('public_list_schools'); if (error) S.fatal = T('eServer'); else S.schools = data || []; }
     else {
       const { data, error } = await JK.sb().rpc('public_get_period', { p_slug: slug });
-      if (error) S.fatal = T('eServer'); else if (!data) S.fatal = T('eLink'); else S.data = data;
+      if (error) S.fatal = T('eServer'); else if (!data) S.fatal = T('eLink'); else S.data = { ...data, groups: groupsForNewOrders(data) };
     }
     render();
   }
