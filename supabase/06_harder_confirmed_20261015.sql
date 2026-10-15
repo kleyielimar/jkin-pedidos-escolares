@@ -1,7 +1,7 @@
 -- HARDER: datos confirmados por Norma el 15 de octubre de 2026.
 -- Ejecutar completo en SQL Editor. NO vuelve a crear tablas ni pedidos.
--- No elimina clases. Conserva IDs de clases reconocidas. Se detiene si hay clases ambiguas
--- con pedidos/entregas o si existe mas de un intervalo de Harder.
+-- No elimina clases. Conserva IDs de clases reconocidas y registros antiguos.
+-- Se detiene si hay clases duplicadas o mas de un intervalo de Harder.
 -- No cambia precios ni habilita prendas de staff sin tallas confirmadas.
 begin;
 create temp table harder_classes_20261015 (
@@ -68,7 +68,7 @@ begin
     and (exists (select 1 from public.order_lines l where l.group_id=g.id)
       or exists (select 1 from public.deliveries d where d.group_id=g.id));
   if conflict_names is not null then
-    raise exception 'No se aplico ningun cambio. Estas clases antiguas tienen pedidos o entregas y requieren revision: %',conflict_names;
+    raise notice 'Se conservaron sin reasignar estas clases antiguas con pedidos o entregas: %',conflict_names;
   end if;
 
   for class_row in select * from harder_classes_20261015 order by sort loop
