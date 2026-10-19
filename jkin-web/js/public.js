@@ -4,7 +4,9 @@
   const root = document.getElementById('app');
   let slug = new URLSearchParams(location.search).get('p') || '';
   const blank = () => ({ group: '', prod: '', model: '', age: '', color: '', size: '', qty: '1', text: '' });
-  const S = { data: null, fatal: '', step: 1, f: { name: '', role: '', contact: '' }, o: blank(), lines: [], errs: {}, ack: false, sending: false, done: null, reqKey: uuid(), added: '', zoom: '', submitErr: '' };
+  const S = { data: null, fatal: '', step: 1, f: { name: '', role: '', contact: '' }, o: blank(), draft: false, lines: [], errs: {}, ack: false, sending: false, done: null, reqKey: uuid(), added: '', zoom: '', submitErr: '' };
+  // Retire this disposable test link without deleting its audit history.
+  const retiredTestSlug = '1f1d0fe52f08c9394c';
 
   const P = id => S.data.products.find(p => p.id === id);
   const G = id => S.data.groups.find(g => g.id === id);
@@ -29,7 +31,8 @@
 
   async function load() {
     if (!JK.configured()) S.fatal = T('eConfig');
-    else if (!slug) { const { data, error } = await JK.sb().rpc('public_list_schools'); if (error) S.fatal = T('eServer'); else S.schools = data || []; }
+    else if (slug === retiredTestSlug) S.fatal = JK.lang === 'es' ? 'El espacio de pruebas ha sido retirado. Usa el enlace oficial para registrar pedidos.' : 'The test space has been retired. Use the official link to place orders.';
+    else if (!slug) { const { data, error } = await JK.sb().rpc('public_list_schools'); if (error) S.fatal = T('eServer'); else S.schools = (data || []).filter(p => p.slug !== retiredTestSlug); }
     else {
       const { data, error } = await JK.sb().rpc('public_get_period', { p_slug: slug });
       if (error) S.fatal = T('eServer'); else if (!data) S.fatal = T('eLink'); else S.data = { ...data, groups: groupsForNewOrders(data) };
@@ -179,6 +182,14 @@
     if (!Number.isInteger(q) || q < 1 || q > 999) e.qty = T('eQty'); if (ind && !o.text.trim()) e.text = T('ePers');
     return { e, q, ind };
   }
+  function appendLine() {
+    const { e, q, ind } = validLine();
+    if (Object.keys(e).length) { showErrors(e); return false; }
+    const o = S.o;
+    S.lines.push({ id: uuid(), group: o.group, prod: o.prod, model: o.model, age: o.age, color: o.color, size: o.size, qty: q, text: ind ? o.text.trim() : '' });
+    S.o = { ...o, size: '', qty: '1', text: '' }; S.draft = false; S.errs = {}; S.added = T('added');
+    return true;
+  }
   const acts = {
     pickSchool: el => { location.href = 'index.html?p=' + encodeURIComponent(el.dataset.slug); },
     lang: el => { JK.setLang(el.dataset.v); render(); },
@@ -187,19 +198,17 @@
       if (S.step === 1) { const e = {}; if (!S.f.name.trim()) e.name = T('eName'); if (!S.f.role) e.role = T('eRole'); if (!S.f.contact.trim()) e.contact = T('eContact'); if (Object.keys(e).length) { S.errs = e; return render(); } }
       S.step = 2; S.errs = {}; render();
     },
-    to3: () => { if (!S.lines.length) { if (S.o.prod) { const { e } = validLine(); if (Object.keys(e).length) return showErrors(e); } return showErrors({ lines: JK.lang === 'es' ? 'Primero pulsa «Agregar» para incluir la prenda en tu preorden.' : 'First click “Add” to include this item in your preorder.' }); } S.step = 3; S.errs = {}; S.ack = false; S.o = { ...blank(), group: S.o.group }; render(); },
-    choose: el => { S.o = { ...blank(), group: S.o.group, prod: el.dataset.id }; S.errs = {}; S.added = ''; render(); const pn = document.getElementById('panel'); if (pn) window.scrollTo({ top: pn.getBoundingClientRect().top + window.scrollY - 12 }); },
-    closePanel: () => { S.o = { ...blank(), group: S.o.group }; S.errs = {}; S.added = ''; render(); },
-    color: el => { S.o.color = el.dataset.id; render(); },
+    to3: () => { if (S.o.prod && S.draft && !appendLine()) return; if (!S.lines.length) return showErrors({ lines: T('eLines') }); S.step = 3; S.errs = {}; S.ack = false; S.o = { ...blank(), group: S.o.group }; S.draft = false; render(); },
+    choose: el => { S.o = { ...blank(), group: S.o.group, prod: el.dataset.id }; S.draft = true; S.errs = {}; S.added = ''; render(); const pn = document.getElementById('panel'); if (pn) window.scrollTo({ top: pn.getBoundingClientRect().top + window.scrollY - 12 }); },
+    closePanel: () => { S.o = { ...blank(), group: S.o.group }; S.draft = false; S.errs = {}; S.added = ''; render(); },
+    color: el => { S.o.color = el.dataset.id; S.draft = true; render(); },
     addLine: () => {
-      const { e, q, ind } = validLine(); if (Object.keys(e).length) return showErrors(e);
-      const o = S.o; S.lines.push({ id: uuid(), group: o.group, prod: o.prod, model: o.model, age: o.age, color: o.color, size: o.size, qty: q, text: ind ? o.text.trim() : '' });
-      S.o = { ...o, size: '', qty: '1', text: '' }; S.errs = {}; S.added = T('added'); render();
+      if (appendLine()) render();
     },
-    edit: el => { const l = S.lines.find(x => x.id === el.dataset.id); if (!l) return; S.lines = S.lines.filter(x => x !== l); S.o = { group: l.group, prod: l.prod, model: l.model, age: l.age, color: l.color, size: l.size, qty: String(l.qty), text: l.text }; S.step = 2; S.added = ''; render(); },
+    edit: el => { const l = S.lines.find(x => x.id === el.dataset.id); if (!l) return; S.lines = S.lines.filter(x => x !== l); S.o = { group: l.group, prod: l.prod, model: l.model, age: l.age, color: l.color, size: l.size, qty: String(l.qty), text: l.text }; S.draft = true; S.step = 2; S.added = ''; render(); },
     del: el => { S.lines = S.lines.filter(x => x.id !== el.dataset.id); render(); },
     zoom: el => { S.zoom = el.dataset.src; render(); }, unzoom: () => { S.zoom = ''; render(); },
-    another: () => { S.lines = []; S.done = null; S.reqKey = uuid(); S.step = 1; S.ack = false; S.o = blank(); S.errs = {}; render(); },
+    another: () => { S.lines = []; S.done = null; S.reqKey = uuid(); S.step = 1; S.ack = false; S.o = blank(); S.draft = false; S.errs = {}; render(); },
     submit: async () => {
       if (S.sending) return;
       if (!S.ack) { S.errs = { ack: T('eAck') }; return render(); }
@@ -216,7 +225,7 @@
   root.addEventListener('click', e => { const el = e.target.closest('[data-act]'); if (el && acts[el.dataset.act]) acts[el.dataset.act](el); });
   const setVal = (t, rerender) => {
     if (t.dataset.f) S.f[t.dataset.f] = t.value;
-    else if (t.dataset.o) { S.o[t.dataset.o] = t.value; if (t.dataset.clr) S.o[t.dataset.clr] = ''; }
+    else if (t.dataset.o) { S.o[t.dataset.o] = t.value; if (S.o.prod) S.draft = true; if (t.dataset.clr) S.o[t.dataset.clr] = ''; }
     else if ('ack' in t.dataset) S.ack = t.checked; else return;
     if (rerender || t.dataset.re !== undefined) render();
   };
@@ -224,3 +233,4 @@
   root.addEventListener('change', e => setVal(e.target, false));
   render(); load();
 })();
+
