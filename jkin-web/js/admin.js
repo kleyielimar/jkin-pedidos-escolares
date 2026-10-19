@@ -22,7 +22,12 @@
     A.loading = true; render();
     try {
       const [schools, periods, groups, products, orders, lines, deliveries, dlines, progress, logs, hist] = await Promise.all([all('schools'), all('periods'), all('groups'), all('products'), all('orders'), all('order_lines'), all('deliveries'), all('delivery_lines'), all('production_progress', 'variant_key'), all('period_date_log'), all('order_history')]);
-      const D = { schools, periods: periods.sort((a, b) => b.open_date.localeCompare(a.open_date)), groups, products, orders, lines, deliveries, dlines, progress, logs, hist, ord: {}, del: {}, prog: {}, prod: {}, sch: {}, per: {}, grp: {} };
+      // Archive only the identified disposable test space from navigation and totals.
+      // Keep its underlying records and audit history available in the database.
+      const retired = periods.filter(p => p.slug === '1f1d0fe52f08c9394c' && schools.some(s => s.id === p.school_id && s.name === 'PRUEBAS JKIN — NO USAR PARA PEDIDOS REALES'));
+      const visiblePeriods = periods.filter(p => !retired.some(r => r.id === p.id));
+      const visibleSchools = schools.filter(s => !retired.some(r => r.school_id === s.id) || visiblePeriods.some(p => p.school_id === s.id));
+      const D = { schools: visibleSchools, periods: visiblePeriods.sort((a, b) => b.open_date.localeCompare(a.open_date)), groups, products, orders, lines, deliveries, dlines, progress, logs, hist, ord: {}, del: {}, prog: {}, prod: {}, sch: {}, per: {}, grp: {} };
       orders.forEach(o => D.ord[o.id] = o); schools.forEach(s => D.sch[s.id] = s); periods.forEach(p => D.per[p.id] = p); groups.forEach(g => D.grp[g.id] = g); products.forEach(p => D.prod[p.id] = p);
       dlines.forEach(x => D.del[x.line_id] = (D.del[x.line_id] || 0) + x.qty);
       progress.forEach(p => D.prog[p.period_id + '|' + p.variant_key] = p);
@@ -298,3 +303,4 @@
     const { data } = await sb().auth.getSession(); if (data.session) await afterAuth(data.session.user);
   })();
 })();
+
